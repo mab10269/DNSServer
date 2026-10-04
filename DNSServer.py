@@ -101,6 +101,7 @@ dns_records = {
                 if qtype == dns.rdatatype.mx:
                     for pref, server in answer_data:
                         rdata_list.append(MX(dns.rdataclass.IN, dns.rdatatype.MX, pref, server))
+               
                 elif qtype == dns.rdatatype.SOA:
                     ( mname, 
                     rname, 
@@ -112,18 +113,17 @@ dns_records = {
                     ) = answer_data 
                     
                     rdata = SOA(
-                        dns.rdataclass.IN, 
-                        dns.rdatatype.SOA, 
-                       (mname, 
-                        rname, 
-                        serial, 
-                        refresh, 
-                        retry, 
-                        expire, 
-                        minimum
-                       ) 
+                    dns.rdataclass.IN, 
+                    dns.rdatatype.SOA, 
+                    mname, 
+                    rname, 
+                    serial, 
+                    refresh, 
+                    retry, 
+                    expire, 
+                    minimum
+                    ) 
                     rdata_list.append(rdata)
-                
                 
                 else:
                     if isinstance(answer_data, str):
@@ -163,4 +163,3 @@ def run_dns_server_user():
 
 if __name__ == '__main__':
     run_dns_server_user()
-
