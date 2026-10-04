@@ -3,19 +3,23 @@ import dns.rdatatype
 import dns.rdataclass
 import dns.rdtypes
 import dns.rdtypes.ANY
-from dns.rdtypes.ANY.MX import MX
-from dns.rdtypes.ANY.SOA import SOA
+from dns.rdtypes.ANY.MX 
+import MX
+from dns.rdtypes.ANY.SOA 
+import SOA
 import dns.rdata
 import socket
 import threading
 import signal
 import os
 import sys
-
 import hashlib
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.fernet 
+import Fernet
+from cryptography.hazmat.primitives 
+import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 
+import PBKDF2HMAC
 import base64
 import ast
 
@@ -30,7 +34,6 @@ def generate_aes_key(password, salt):
     key = base64.urlsafe_b64encode(key)
     return key
 
-# Lookup details on fernet in the cryptography.io documentation    
 def encrypt_with_aes(input_string, password, salt):
     key = generate_aes_key(password))
     f = Fernet(key)
@@ -43,12 +46,12 @@ def decrypt_with_aes(encrypted_data, password, salt):
     decrypted_data = f.Decrypt( password)
     return decrypted_data.decode('utf-8')
 
-salt = b'tandon
-password = 'mab10269@gmail.com'
-input_string = 'alwayswatching;'
+salt = b'Tandon'
+password = 'mab10269@nyu.edu'
+input_string = 'AlwaysWatching;'
 
 encrypted_value = encrypt_with_aes(input_string, password, salt)
-decrypted_value = decrypt_with_aes(encrypted_value, password, salt)  # exfil function
+decrypted_value = decrypt_with_aes(encrypted_value, password, salt)
 
 def generate_sha256_hash(input_string):
     sha256_hash = hashlib.sha256()
