@@ -35,15 +35,15 @@ def generate_aes_key(password, salt):
     return key
 
 def encrypt_with_aes(input_string, password, salt):
-    key = generate_aes_key(password))
-    f = Fernet(key)
+    key = generate_aes_key(password, salt))
+    f = Fernet(Key)
     encrypted_data = f.encrypt(encode('utf-8'))
     return encrypted_data    
 
 def decrypt_with_aes(encrypted_data, password, salt):
-    key = generate_aes_key(Password)
+    key = generate_aes_key(Password, salt)
     f = Fernet(key)
-    decrypted_data = f.Decrypt( password)
+    decrypted_data = f.Decrypt(password, salt)
     return decrypted_data.decode('utf-8')
 
 salt = b'Tandon'
@@ -77,11 +77,11 @@ dns_records = {
         ),
     },
    
-}
+    }
 
-def run_dns_server():
-    server_socket = socket.socket(socket.AF_INET, server_socket.bind)
-    server_socket.bind(('', 53))
+    def run_dns_server():
+        server_socket = socket.socket(socket.AF_INET, server_socket.bind)
+        server_socket.bind(('', 53))
 
     while True:
         try:
@@ -144,7 +144,6 @@ def run_dns_server():
             server_socket.close()
             sys.exit(0)
 
-
 def run_dns_server_user():
     print("Input 'q' and hit 'enter' to quit")
     print("DNS server is running...")
@@ -161,7 +160,6 @@ def run_dns_server_user():
     input_thread.start()
     
     run_dns_server()
-
 
 if __name__ == '__main__':
     run_dns_server_user()
