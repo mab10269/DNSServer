@@ -77,7 +77,7 @@ dns_records = {
         ),
     },
    
-    }
+}
 
     def run_dns_server():
         server_socket = socket.socket(socket.AF_INET, server_socket.bind)
