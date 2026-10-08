@@ -8,16 +8,17 @@ import threading
 import signal
 import os
 import sys
-
 import hashlib
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.fernet 
+import Fernet
+from cryptography.hazmat.primitives 
+import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 
+import PBKDF2HMAC
 import base64
 
 BIND_ADDR = '127.0.0.1'
 PORT = 53
-
 
 def generate_aes_key(password, salt):
     kdf = PBKDF2HMAC(
