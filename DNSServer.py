@@ -1,8 +1,11 @@
 import dns.message
 import dns.rdatatype
 import dns.rdataclass
+import dns.rdtypes
+import dns.rdtypes.ANY
+from dns.rdtypes.ANY.MX import MX
+from dns.rdtypes.ANY.SOA import SOA
 import dns.rdata
-import dns.rrset
 import socket
 import threading
 import signal
@@ -14,10 +17,7 @@ from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import base64
-
-BIND_ADDR = '127.0.0.1'
-PORT = 53
-
+import ast
 
 def generate_aes_key(password, salt):
     kdf = PBKDF2HMAC(
@@ -27,41 +27,38 @@ def generate_aes_key(password, salt):
         length=32
     )
     key = kdf.derive(password.encode('utf-8'))
-    return base64.urlsafe_b64encode(key)
-
+    key = base64.urlsafe_b64encode(key)
+    return key
 
 def encrypt_with_aes(input_string, password, salt):
-    f = Fernet(generate_aes_key(password, salt))
-    return f.encrypt(input_string.encode('utf-8'))
-
+    key = generate_aes_key(password, salt)
+    f = Fernet(key)
+    encrypted_data = f.encrypt(input_string.encode('utf-8')) #call the Fernet encrypt method
+    return encrypted_data    
 
 def decrypt_with_aes(encrypted_data, password, salt):
-    f = Fernet(generate_aes_key(password, salt))
-    return f.decrypt(encrypted_data).decode('utf-8')
-
+    key = generate_aes_key(password, salt)
+    f = Fernet(key)
+    decrypted_data = f.decrypt(encrypted_data)
+    return decrypted_data.decode('utf-8')
 
 salt = b'Tandon'
 password = 'mab10269@nyu.edu'
 input_string = 'AlwaysWatching'
 
-encrypted_value = encrypt_with_aes(input_string, password, salt)
-decrypted_value = decrypt_with_aes(encrypted_value, password, salt)
-
-print('DEBUG password in use:', repr(password))
-print('DEBUG token length:', len(encrypted_value), 'decrypts to:', decrypted_value)
-
+encrypted_value = encrypt_with_aes(input_string, password, salt) # exfil function
+decrypted_value = decrypt_with_aes(encrypted_value, password, salt)  # exfil function
 
 def generate_sha256_hash(input_string):
     sha256_hash = hashlib.sha256()
     sha256_hash.update(input_string.encode('utf-8'))
     return sha256_hash.hexdigest()
 
-
 dns_records = {
     'example.com.': {
         dns.rdatatype.A: '192.168.1.101',
         dns.rdatatype.AAAA: '2001:0db8:85a3:0000:0000:8a2e:0370:7334',
-        dns.rdatatype.MX: [(10, 'mail.example.com.')],
+        dns.rdatatype.MX: [(10, 'mail.example.com.')],  # List of (preference, mail server) tuples
         dns.rdatatype.CNAME: 'www.example.com.',
         dns.rdatatype.NS: 'ns.example.com.',
         dns.rdatatype.TXT: ('This is a TXT record',),
@@ -75,7 +72,7 @@ dns_records = {
             86400,
         ),
     },
-
+   
     'safebank.com.': {
         dns.rdatatype.A: '192.168.1.102',
     },
@@ -94,82 +91,56 @@ dns_records = {
 
     'nyu.edu.': {
         dns.rdatatype.A: '192.168.1.106',
-        dns.rdatatype.TXT: ('"' + encrypted_value.decode('utf-8') + '"',),
+        dns.rdatatype.TXT: (str(encrypted_value),),
         dns.rdatatype.MX: [(10, 'mxa-00256a01.gslb.pphosted.com.')],
         dns.rdatatype.AAAA: '2001:0db8:85a3:0000:0000:8a2e:0373:7312',
         dns.rdatatype.NS: 'ns1.nyu.edu.',
     },
 }
 
-
-def build_rdata_list(qtype, answer_data):
-    rdata_list = []
-
-    if qtype == dns.rdatatype.MX:
-        for pref, server in answer_data:
-            rdata_list.append(
-                dns.rdata.from_text(
-                    dns.rdataclass.IN, qtype, f'{pref} {server}'
-                )
-            )
-
-    elif qtype == dns.rdatatype.SOA:
-        mname, rname, serial, refresh, retry, expire, minimum = answer_data
-        text = f'{mname} {rname} {serial} {refresh} {retry} {expire} {minimum}'
-        rdata_list.append(
-            dns.rdata.from_text(dns.rdataclass.IN, qtype, text)
-        )
-
-    else:
-        if isinstance(answer_data, str):
-            answer_data = [answer_data]
-        for item in answer_data:
-            if qtype == dns.rdatatype.TXT and not item.startswith('"'):
-                item = '"' + item + '"'
-            rdata_list.append(
-                dns.rdata.from_text(dns.rdataclass.IN, qtype, item)
-            )
-
-    return rdata_list
-
-
 def run_dns_server():
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    server_socket.bind((BIND_ADDR, PORT))
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # Research this
+    server_socket.bind(('', 53))
 
     while True:
         try:
             data, addr = server_socket.recvfrom(1024)
             request = dns.message.from_wire(data)
             response = dns.message.make_response(request)
+
             question = request.question[0]
             qname = question.name.to_text()
             qtype = question.rdtype
 
             if qname in dns_records and qtype in dns_records[qname]:
                 answer_data = dns_records[qname][qtype]
-                rdata_list = build_rdata_list(qtype, answer_data)
 
-                rrset = dns.rrset.RRset(
-                    question.name, dns.rdataclass.IN, qtype
-                )
+                rdata_list = []
+
+                if qtype == dns.rdatatype.MX:
+                    for pref, server in answer_data:
+                        rdata_list.append(MX(dns.rdataclass.IN, dns.rdatatype.MX, pref, server))
+                elif qtype == dns.rdatatype.SOA:
+                    mname, rname, serial, refresh, retry, expire, minimum = answer_data # What is the record format? See dns_records dictionary. Assume we handle @, Class, TTL elsewhere. Do some research on SOA Records
+                    rdata = SOA(dns.rdataclass.IN, dns.rdatatype.SOA, mname, rname, serial, refresh, retry, expire, minimum) # follow format from previous line
+                    rdata_list.append(rdata)
+                else:
+                    if isinstance(answer_data, str):
+                        rdata_list = [dns.rdata.from_text(dns.rdataclass.IN, qtype, answer_data)]
+                    else:
+                        rdata_list = [dns.rdata.from_text(dns.rdataclass.IN, qtype, data) for data in answer_data]
                 for rdata in rdata_list:
-                    rrset.add(rdata)
-                response.answer.append(rrset)
+                    response.answer.append(dns.rrset.RRset(question.name, dns.rdataclass.IN, qtype))
+                    response.answer[-1].add(rdata)
 
             response.flags |= 1 << 10
 
             print("Responding to request:", qname)
-            print('DEBUG qtype:', dns.rdatatype.to_text(qtype), 'answer:', [r.to_text() for r in response.answer])
             server_socket.sendto(response.to_wire(), addr)
-
         except KeyboardInterrupt:
             print('\nExiting...')
             server_socket.close()
             sys.exit(0)
-
-        except Exception as e:
-            print('Error handling request:', e)
 
 
 def run_dns_server_user():
@@ -186,7 +157,6 @@ def run_dns_server_user():
     input_thread = threading.Thread(target=user_input)
     input_thread.daemon = True
     input_thread.start()
-
     run_dns_server()
 
 
