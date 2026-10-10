@@ -8,14 +8,16 @@ import threading
 import signal
 import os
 import sys
+
 import hashlib
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2  import PBKDF2HMAC
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import base64
 
 BIND_ADDR = '127.0.0.1'
 PORT = 53
+
 
 def generate_aes_key(password, salt):
     kdf = PBKDF2HMAC(
@@ -44,6 +46,9 @@ input_string = 'AlwaysWatching'
 
 encrypted_value = encrypt_with_aes(input_string, password, salt)
 decrypted_value = decrypt_with_aes(encrypted_value, password, salt)
+
+print('DEBUG password in use:', repr(password))
+print('DEBUG token length:', len(encrypted_value), 'decrypts to:', decrypted_value)
 
 
 def generate_sha256_hash(input_string):
@@ -155,6 +160,7 @@ def run_dns_server():
             response.flags |= 1 << 10
 
             print("Responding to request:", qname)
+            print('DEBUG qtype:', dns.rdatatype.to_text(qtype), 'answer:', [r.to_text() for r in response.answer])
             server_socket.sendto(response.to_wire(), addr)
 
         except KeyboardInterrupt:
